@@ -32,7 +32,6 @@ def check_keypair_count(system, warn=10, crit=15, **kwargs):
     """ Check overall keypair count. """
     warn = int(warn)
     crit = int(crit)
-    # Need to merge https://github.com/ManageIQ/wrapanapi/pull/395 for list_keypair to work
     keypair_count = len(system.list_keypair())
     # determine ok, warning, critical, unknown state
     if keypair_count < warn:

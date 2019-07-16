@@ -6,10 +6,12 @@ RHV API.
 """
 
 import argparse
+import json
 import sys
 
 from argparse import RawTextHelpFormatter
 from osp_checks import CHECKS
+from osp_logconf import get_logger
 from wrapanapi.systems.openstack import OpenstackSystem
 
 
@@ -78,7 +80,24 @@ def main():
         type=float,
         default=0.9
     )
+    parser.add_argument(
+        "-l",
+        "--local",
+        dest="local",
+        help="Use this field when testing locally",
+        action="store_true",
+        default=False
+    )
+    parser.add_argument(
+        "-s",
+        "--services",
+        dest="services",
+        help="Dictionary of services and their expected statuses",
+        type=str,
+    )
     args = parser.parse_args()
+    # set logger
+    logger = get_logger(args.local)
     if float(args.warning) > float(args.critical):
         print("Error: warning value can not be greater than critical value")
         sys.exit(3)
@@ -95,7 +114,29 @@ def main():
         sys.exit(3)
     # run the measurement function
     measure_func(system, warn=args.warning, crit=args.critical)
-
+    # run the measurement function
+    # if warning and critical values are not set, we need to use the default and not pass them
+    try:
+        logger.info("Calling check %s", measure_func.__name__)
+        if args.warning is None and args.critical is None and args.services is None:
+            measure_func(system, logger=logger)
+        elif args.warning is None and args.critical is None and args.services is not None:
+            measure_func(system, logger=logger, **json.loads(args.services.replace("'", "\"")))
+        else:
+            measure_func(system, warn=args.warning, crit=args.critical, logger=logger)
+    except Exception as e:
+        logger.error(
+            "Exception occurred during execution of %s",
+            measure_func.__name__,
+            exc_info=True
+        )
+        print(
+            "ERROR: exception '{}' occurred during execution of '{}', check logs for trace".format(
+                e,
+                measure_func.__name__
+            )
+        )
+        sys.exit(3)
 
 if __name__ == "__main__":
     main()
