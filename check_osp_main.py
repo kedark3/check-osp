@@ -99,7 +99,9 @@ def main():
     # set logger
     logger = get_logger(args.local)
     if float(args.warning) > float(args.critical):
-        print("Error: warning value can not be greater than critical value")
+        msg = "Error: warning value can not be greater than critical value"
+        print(msg)
+        logger.error(msg)
         sys.exit(3)
 
     # connect to the system
@@ -112,16 +114,14 @@ def main():
     if not measure_func:
         print("Error: measurement {} not understood".format(args.measurement))
         sys.exit(3)
-    # run the measurement function
-    measure_func(system, warn=args.warning, crit=args.critical)
+
     # run the measurement function
     # if warning and critical values are not set, we need to use the default and not pass them
     try:
         logger.info("Calling check %s", measure_func.__name__)
-        if args.warning is None and args.critical is None and args.services is None:
-            measure_func(system, logger=logger)
-        elif args.warning is None and args.critical is None and args.services is not None:
-            measure_func(system, logger=logger, **json.loads(args.services.replace("'", "\"")))
+        if args.services:
+            services_dict = json.loads(args.services.replace("'", "\""))
+            measure_func(system, logger=logger, services=services_dict)
         else:
             measure_func(system, warn=args.warning, crit=args.critical, logger=logger)
     except Exception as e:
