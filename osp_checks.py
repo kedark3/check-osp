@@ -10,94 +10,66 @@ from utils import is_service_in_status
 from utils import ssh_client
 
 
-def check_vm_count(system, warn=10, crit=15, **kwargs):
-    """ Check overall vm count. """
-    logger = kwargs["logger"]
+def check_threshold(count, warn, crit, logger):
+    """determine ok, warning, critical, unknown state. """
     warn = int(warn)
     crit = int(crit)
-    vm_count = len(system.list_vms())
-    # determine ok, warning, critical, unknown state
-    if vm_count < warn:
-        msg = ("Ok: VM count is less than {}. VM Count = {}".format(warn, vm_count))
+    if count < warn:
+        msg = ("Ok: Resource Count={} is less than threshold warning={}".format(count), warn)
         logger.info(msg)
         print(msg)
         sys.exit(0)
-    elif vm_count >= warn and vm_count <= crit:
-        msg = ("Warning: VM count is >=  {} & <= {}. VM Count = {}"
-            .format(warn, crit, vm_count))
+    elif count >= warn and count <= crit:
+        msg = ("Warning: Resource count={} is reached threshold warning range={}<-->{}".format(
+            count, warn, crit))
         logger.warning(msg)
         print(msg)
         sys.exit(1)
-    elif vm_count > crit:
-        msg = ("Critical: VM count is greater than {}. VM Count = {}".format(crit, vm_count))
+    elif count > crit:
+        msg = ("Critical: Resource count={} has crossed threshold critical={}".format(
+            count, crit))
         logger.error(msg)
         print(msg)
         sys.exit(2)
     else:
-        print("Unknown: VM count is unknown")
+        print("Unknown: Resource count is unknown")
     sys.exit(3)
+
+
+def check_vm_count(system, warn=10, crit=15, **kwargs):
+    """ Check overall vm count. """
+    logger = kwargs["logger"]
+    vm_count = len(system.list_vms())
+    logger.info("Checking threshold status for instance count")
+    check_threshold(vm_count, warn, crit, logger)
 
 
 def check_keypair_count(system, warn=10, crit=15, **kwargs):
     """ Check overall keypair count. """
     logger = kwargs["logger"]
-    warn = int(warn)
-    crit = int(crit)
     keypair_count = len(system.list_keypair())
-    # determine ok, warning, critical, unknown state
-    if keypair_count < warn:
-        msg = "Ok: Keypair count is less than {}. Keypair Count = {}".format(warn, keypair_count)
-        logger.info(msg)
-        print(msg)
-        sys.exit(0)
-    elif keypair_count >= warn and keypair_count <= crit:
-        msg = ("Warning: Keypair count is >=  {} & <= {}. Keypair Count = {}"
-            .format(warn, crit, keypair_count))
-        logger.warning(msg)
-        print(msg)
-        sys.exit(1)
-    elif keypair_count > crit:
-        msg = ("Critical: Keypair count is greater than {}. Keypair Count = {}".format(
-            crit, keypair_count))
-        logger.error(msg)
-        print(msg)
-        sys.exit(2)
-    else:
-        msg = ("Unknown: Keypair count is unknown")
-        logger.info(msg)
-        print(msg)
-    sys.exit(3)
+    logger.info("Checking threshold status for keypair count")
+    check_threshold(keypair_count, warn, crit, logger)
 
 
 def check_volume_count(system, warn=10, crit=15, **kwargs):
     """ Check overall volume count. """
     logger = kwargs["logger"]
-    warn = int(warn)
-    crit = int(crit)
     volume_count = len(system.list_volume())
-    # determine ok, warning, critical, unknown state
-    if volume_count < warn:
-        msg = ("Ok: Volume count is less than {}. Volume Count = {}".format(warn, volume_count))
-        logger.info(msg)
-        print(msg)
-        sys.exit(0)
-    elif volume_count >= warn and volume_count <= crit:
-        msg = ("Warning: Volume count is >=  {} & <= {}. Volume Count = {}"
-            .format(warn, crit, volume_count))
-        logger.warning(msg)
-        print(msg)
-        sys.exit(1)
-    elif volume_count > crit:
-        msg = ("Critical: Volume count is greater than {}. Volume Count = {}".format(
-            crit, volume_count))
-        logger.error(msg)
-        print(msg)
-        sys.exit(2)
-    else:
-        msg = ("Unknown: Volume count is unknown")
-        logger.info(msg)
-        print(msg)
-    sys.exit(3)
+    logger.info("Checking threshold status for volume count")
+    check_threshold(volume_count, warn, crit, logger)
+
+
+def check_snapshot_count(system, warn=10, crit=15, **kwargs):
+    """ Check overall Snapshot count. """
+    logger = kwargs["logger"]
+    snapshot_count = 0
+    images = system.list_templates()
+    for img in images:
+        if img.name.startswith("test_snapshot_"):
+            snapshot_count += 1
+    logger.info("Checking threshold status for snapshot count")
+    check_threshold(snapshot_count, warn, crit, logger)
 
 
 def check_services_status(system, **kwargs):
@@ -138,6 +110,7 @@ def check_services_status(system, **kwargs):
         logger.error(msg)
         print(msg)
         sys.exit(2)
+
 
 CHECKS = {
     "vm_count": check_vm_count,
