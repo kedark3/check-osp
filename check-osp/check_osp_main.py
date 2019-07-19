@@ -8,6 +8,7 @@ RHV API.
 import argparse
 import json
 import sys
+import yaml
 
 from argparse import RawTextHelpFormatter
 from osp_checks import CHECKS
@@ -88,12 +89,22 @@ def main():
         action="store_true",
         default=False
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "-s",
         "--services",
         dest="services",
-        help="Dictionary of services and their expected statuses",
+        help=("Dictionary of services and their expected statuses"
+            "(if this provided, don't provide -f/--services-file)"),
         type=str,
+    )
+    group.add_argument(
+        "-f",
+        "--services-file",
+        dest="services_file",
+        help=("yml file containing list of services to be checked with their desired state "
+        "e.g. conf/services_to_check.yml"),
+        type=str
     )
     args = parser.parse_args()
     # set logger
@@ -119,8 +130,18 @@ def main():
     # if warning and critical values are not set, we need to use the default and not pass them
     try:
         logger.info("Calling check %s", measure_func.__name__)
-        if args.services:
-            services_dict = json.loads(args.services.replace("'", "\""))
+        if args.measurement == 'services_status':
+            if args.services:
+                services_dict = json.loads(args.services.replace("'", "\""))
+            elif args.services_file:
+                try:
+                    with open(args.services_file, "r") as stream:
+                        services_dict = yaml.safe_load(stream)
+                except IOError:
+                    msg = "File {} does not exist".format(args.services_file)
+                    print(msg)
+                    logger.error(msg)
+                    sys.exit(3)
             measure_func(system, logger=logger, services=services_dict)
         else:
             measure_func(system, warn=args.warning, crit=args.critical, logger=logger)
