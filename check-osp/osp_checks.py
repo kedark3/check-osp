@@ -6,7 +6,7 @@ OSP API/Wrapanapi
 
 import sys
 
-from utils import is_service_in_status
+from utils import get_services_status_list
 from utils import ssh_client
 
 
@@ -107,22 +107,33 @@ def check_services_status(system, **kwargs):
     hosts_agents = dict()
     hosts_status = dict()
     services = kwargs['services']
-
     for host in hosts:
         # if a hostname contains localhost, we want to avoid trying to connect
         if 'localhost' in host:
             continue
-        ssh = ssh_client(host, username="root", password=system.password)
-        with ssh:
-            for service_name, status in services.iteritems():
-                service_status = is_service_in_status(ssh, service_name, status)
-                try:
-                    hosts_agents[host].update({service_name: service_status})
-                except KeyError:
-                    hosts_agents[host] = {service_name: service_status}
-
+        try:
+            service_for_host = services[host]
+            with ssh_client(host, username="root", password=system.password) as ssh:
+                service_status_dict = get_services_status_list(ssh)
+        except KeyError:
+            logger.info("Skipping host {} as it is not in yml.".format(host))
+            continue
+        for service_name, expected_status in service_for_host.items():
+            # if service_status_dict has service `service_name` get its status
+            # compare it with expected_status
+            try:
+                logger.debug("service:{} status: {} expected_status: {}"
+                    .format(service_name, service_status_dict[service_name], expected_status))
+                service_status = (expected_status in service_status_dict[service_name])
+            except KeyError:
+                # This is because not all hosts may have all services installed
+                logger.debug("Service {} not found on host {}".format(service_name, host))
+                continue
+            try:
+                hosts_agents[host].update({service_name: service_status})
+            except KeyError:
+                hosts_agents[host] = {service_name: service_status}
         hosts_status[host] = all(hosts_agents[host].values())
-
     overall_status = all(hosts_status.values())
 
     if overall_status:  # all true, everything is running
