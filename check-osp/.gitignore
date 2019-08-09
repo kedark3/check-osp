@@ -1,0 +1,3 @@
+conf/cfme-qe-yamls
+conf/.yaml_key
+*.log
