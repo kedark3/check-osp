@@ -10,11 +10,25 @@ from utils import get_services_status_list
 from utils import ssh_client
 
 
-def check_vm_count(system, warn=10, crit=15, **kwargs):
+def get_quotas(system, logger):
+    try:
+        project = [project for project in system.tenant_api.list()
+         if project.name == system.tenant][0]
+    except IndexError:
+        logger.error("No project named {} was available".format(system.tenant))
+    return system.api.quotas.defaults(project.id)
+
+
+def check_vm_count(system, warn=None, crit=None, **kwargs):
     """ Check overall vm count. """
     logger = kwargs["logger"]
-    warn = int(warn)
-    crit = int(crit)
+    if warn is None or crit is None:
+        q = get_quotas(system, logger)
+        warn = q.instances - 5
+        crit = q.instances - 2
+    else:
+        warn = int(warn)
+        crit = int(crit)
     vm_count = len(system.list_vms())
     # determine ok, warning, critical, unknown state
     if vm_count < warn:
@@ -38,11 +52,16 @@ def check_vm_count(system, warn=10, crit=15, **kwargs):
     sys.exit(3)
 
 
-def check_keypair_count(system, warn=10, crit=15, **kwargs):
+def check_keypair_count(system, warn=None, crit=None, **kwargs):
     """ Check overall keypair count. """
     logger = kwargs["logger"]
-    warn = int(warn)
-    crit = int(crit)
+    if warn is None or crit is None:
+        q = get_quotas(system, logger)
+        warn = q.key_pairs - 10
+        crit = q.key_pairs - 5
+    else:
+        warn = int(warn)
+        crit = int(crit)
     keypair_count = len(system.list_keypair())
     # determine ok, warning, critical, unknown state
     if keypair_count < warn:
@@ -149,6 +168,9 @@ def check_services_status(system, **kwargs):
         logger.error(msg)
         print(msg)
         sys.exit(2)
+
+# TODO: Add floating IP count check
+# TODO: Add security groups check
 
 CHECKS = {
     "vm_count": check_vm_count,
