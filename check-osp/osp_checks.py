@@ -38,6 +38,27 @@ def check_vm_count(system, warn=10, crit=15, **kwargs):
     sys.exit(3)
 
 
+def check_image_count(system, warn=10, crit=15, **kwargs):
+    """ Check overall Image count. """
+    warn = int(warn)
+    crit = int(crit)
+    image_count = len(system.list_templates())
+    # determine ok, warning, critical, unknown state
+    if image_count < warn:
+        print("Ok: Image count is less than {}. Image Count = {}".format(warn, image_count))
+        sys.exit(0)
+    elif image_count >= warn and image_count <= crit:
+        print("Warning: Image count is >=  {} & <= {}. Image Count = {}"
+            .format(warn, crit, image_count))
+        sys.exit(1)
+    elif image_count > crit:
+        print("Critical: Image count is greate than {}. Image Count = {}".format(crit, image_count))
+        sys.exit(2)
+    else:
+        print("Unknown: Image count is unknown")
+    sys.exit(3)
+
+
 def check_keypair_count(system, warn=10, crit=15, **kwargs):
     """ Check overall keypair count. """
     logger = kwargs["logger"]
@@ -152,6 +173,7 @@ def check_services_status(system, **kwargs):
 
 CHECKS = {
     "vm_count": check_vm_count,
+    "image_count": check_image_count,
     "keypair_count": check_keypair_count,
     "volume_count": check_volume_count,
     "services_status": check_services_status
