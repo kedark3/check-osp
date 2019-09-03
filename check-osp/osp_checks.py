@@ -15,18 +15,18 @@ def check_threshold(count, warn, crit, logger):
     warn = int(warn)
     crit = int(crit)
     if count < warn:
-        msg = ("Ok: Resource Count={} is less than threshold warning={}".format(count), warn)
+        msg = ("Normal: Resource Count={} is less than the warning={} level".format(count, warn))
         logger.info(msg)
         print(msg)
         sys.exit(0)
-    elif count >= warn and count <= crit:
-        msg = ("Warning: Resource count={} is reached threshold warning range={}<-->{}".format(
-            count, warn, crit))
+    elif count >= warn and count < crit:
+        msg = ("Warning: Resource count={} has reached the warning={} level".format(
+            count, warn))
         logger.warning(msg)
         print(msg)
         sys.exit(1)
-    elif count > crit:
-        msg = ("Critical: Resource count={} has crossed threshold critical={}".format(
+    elif count >= crit:
+        msg = ("Critical: Resource count={} has reached the critical={} level".format(
             count, crit))
         logger.error(msg)
         print(msg)
@@ -42,6 +42,16 @@ def check_vm_count(system, warn=10, crit=15, **kwargs):
     vm_count = len(system.list_vms())
     logger.info("Checking threshold status for instance count")
     check_threshold(vm_count, warn, crit, logger)
+
+
+def check_image_count(system, warn=10, crit=15, **kwargs):
+    """ Check overall Image count. """
+    logger = kwargs["logger"]
+    warn = int(warn)
+    crit = int(crit)
+    image_count = len(system.list_templates())
+    logger.info("Checking threshold status for image count")
+    check_threshold(image_count, warn, crit, logger)
 
 
 def check_keypair_count(system, warn=10, crit=15, **kwargs):
@@ -125,6 +135,7 @@ def check_services_status(system, **kwargs):
 
 CHECKS = {
     "vm_count": check_vm_count,
+    "image_count": check_image_count,
     "keypair_count": check_keypair_count,
     "volume_count": check_volume_count,
     "services_status": check_services_status
