@@ -138,5 +138,6 @@ CHECKS = {
     "image_count": check_image_count,
     "keypair_count": check_keypair_count,
     "volume_count": check_volume_count,
-    "services_status": check_services_status
+    "services_status": check_services_status,
+    "check_snapshot": check_snapshot_count
 }
