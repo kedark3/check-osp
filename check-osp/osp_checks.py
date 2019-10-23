@@ -10,10 +10,16 @@ from utils import get_services_status_list
 from utils import ssh_client
 
 
-def check_threshold(count, warn, crit, logger):
+def check_threshold(count, warn, crit, logger, **kwargs):
     """determine ok, warning, critical, unknown state. """
-    warn = int(warn)
-    crit = int(crit)
+    quota = kwargs.get("quota")
+    if quota:
+        warn = int(quota - crit)
+        crit = int(quota - warn)
+    else:
+        warn = int(warn)
+        crit = int(crit)
+
     if count < warn:
         msg = ("Normal: Resource Count={} is less than the warning={} level".format(count, warn))
         logger.info(msg)
@@ -58,16 +64,20 @@ def check_keypair_count(system, warn=10, crit=15, **kwargs):
     """ Check overall keypair count. """
     logger = kwargs["logger"]
     keypair_count = len(system.list_keypair())
+    # get the keypair quota
+    quota = system.get_quota(quota="compute").get("compute").get("key_pairs")
     logger.info("Checking threshold status for keypair count")
-    check_threshold(keypair_count, warn, crit, logger)
+    check_threshold(keypair_count, warn, crit, logger, quota=quota)
 
 
 def check_volume_count(system, warn=10, crit=15, **kwargs):
     """ Check overall volume count. """
     logger = kwargs["logger"]
     volume_count = len(system.list_volume())
+    # get the volume quota
+    quota = system.get_quota(quota="volume").get("volume").get("volumes")
     logger.info("Checking threshold status for volume count")
-    check_threshold(volume_count, warn, crit, logger)
+    check_threshold(volume_count, warn, crit, logger, quota=quota)
 
 
 def check_snapshot_count(system, warn=10, crit=15, **kwargs):
@@ -78,8 +88,10 @@ def check_snapshot_count(system, warn=10, crit=15, **kwargs):
     for img in images:
         if img.name.startswith("test_snapshot_"):
             snapshot_count += 1
+    # get the snapshot quota
+    quota = system.get_quota(quota="volume").get("volume").get("snapshots")
     logger.info("Checking threshold status for snapshot count")
-    check_threshold(snapshot_count, warn, crit, logger)
+    check_threshold(snapshot_count, warn, crit, logger, quota=quota)
 
 
 def check_services_status(system, **kwargs):
@@ -138,6 +150,6 @@ CHECKS = {
     "image_count": check_image_count,
     "keypair_count": check_keypair_count,
     "volume_count": check_volume_count,
+    "snapshot_count": check_snapshot_count,
     "services_status": check_services_status,
-    "check_snapshot": check_snapshot_count
 }
